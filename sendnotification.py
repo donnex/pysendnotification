@@ -16,15 +16,18 @@ class SendNotificationConf(OrderedDict):
 class SendNotification(object):
     """Send a notification"""
 
-    def __init__(self, auto_conf=True):
+    def __init__(self, auto_conf=True, conf=None):
         if auto_conf:
-            self.auto_conf()
+            self.auto_conf(conf)
         else:
             self.conf = SendNotificationConf()
 
-    def auto_conf(self):
-        self.conf_path = os.path.join(os.path.expanduser('~'),
-            '.{}'.format(os.path.splitext(os.path.basename(__file__))[0]))
+    def auto_conf(self, conf):
+        if conf:
+            self.conf_path = conf
+        else:
+            self.conf_path = os.path.join(os.path.expanduser('~'),
+                '.{}'.format(os.path.splitext(os.path.basename(__file__))[0]))
 
         try:
             conf = json.loads(open(self.conf_path).read())
