@@ -2,7 +2,7 @@ from distutils.core import setup
 
 setup(
     name='sendnotification',
-    version='0.1',
+    version='1.0.1',
     description='Send notification',
     url='',
     py_modules=['sendnotification'],
