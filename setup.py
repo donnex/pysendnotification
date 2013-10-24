@@ -11,4 +11,9 @@ setup(
     author='Daniel Johansson',
     author_email='donnex@donnex.net',
     license='BSD',
+
+    install_requires=[
+        'redis',
+        'requests',
+    ]
 )
