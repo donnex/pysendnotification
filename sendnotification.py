@@ -1,6 +1,6 @@
+import json
 import logging
 import os
-import json
 from collections import OrderedDict
 
 
@@ -26,70 +26,77 @@ class SendNotification(object):
         if conf:
             self.conf_path = conf
         else:
-            self.conf_path = os.path.join(os.path.expanduser('~'),
-                '.{}'.format(os.path.splitext(os.path.basename(__file__))[0]))
+            self.conf_path = os.path.join(
+                os.path.expanduser("~"),
+                ".{}".format(os.path.splitext(os.path.basename(__file__))[0]),
+            )
 
         try:
             conf = json.loads(open(self.conf_path).read())
         except IOError:
-            error = 'Can\'t find json config file %s' % (self.conf_path,)
+            error = "Can't find json config file %s" % (self.conf_path,)
             logging.error(error)
             raise SendNotificationException(error)
         except ValueError:
-            error = 'Invalid json config file'
+            error = "Invalid json config file"
             logging.error(error)
             raise SendNotificationException(error)
 
         self.conf = SendNotificationConf()
-        for service in conf['services']:
-            self.conf[service['title']] = service['settings']
+        for service in conf["services"]:
+            self.conf[service["title"]] = service["settings"]
 
-    def validate_service_settings(self, service, settings_needed, settings_optional):
+    def validate_service_settings(
+        self, service, settings_needed, settings_optional
+    ):
         service_settings = self.conf[service]
         valid_settings = settings_needed + settings_optional
         # Make sure all needed settings are set
         for setting in settings_needed:
-            if setting not in service_settings or not service_settings[setting].strip():
-                error = 'Missing setting for {}, {}'.format(service, setting)
+            if (
+                setting not in service_settings
+                or not service_settings[setting].strip()
+            ):
+                error = "Missing setting for {}, {}".format(service, setting)
                 logging.error(error)
                 raise SendNotificationException(error)
         # Don't allow any unwanted settings
         for setting in service_settings:
             if setting not in valid_settings:
-                error = 'Unknown setting for {}, {}'.format(service, setting)
+                error = "Unknown setting for {}, {}".format(service, setting)
                 logging.error(error)
                 raise SendNotificationException(error)
 
     def validate_conf(self):
         # Validate that at least one service exists
         if len(self.conf) == 0:
-            error = 'Missing services, at least one is needed'
+            error = "Missing services, at least one is needed"
             logging.error(error)
             raise SendNotificationException(error)
 
         for service in self.conf:
-            if service not in ('notifikationnu', 'pushover', 'email'):
-                error = 'Invalid service, {}'.format(service)
+            if service not in ("notifikationnu", "pushover", "email"):
+                error = "Invalid service, {}".format(service)
                 logging.error(error)
                 raise SendNotificationException(error)
 
-            if service == 'notifikationnu':
+            if service == "notifikationnu":
                 self.validate_service_settings(
                     service,
-                    settings_needed=('api_key', 'notification_id'),
-                    settings_optional=('category', 'event')
+                    settings_needed=("api_key", "notification_id"),
+                    settings_optional=("category", "event"),
                 )
-            elif service == 'pushover':
+            elif service == "pushover":
                 self.validate_service_settings(
                     service,
-                    settings_needed=('app_token', 'api_key'),
-                    settings_optional=('title',)
+                    settings_needed=("app_token", "api_key"),
+                    settings_optional=("title",),
                 )
-            elif service == 'email':
+            elif service == "email":
                 self.validate_service_settings(
                     service,
-                    settings_needed=('subject', 'to'),
-                    settings_optional=('sender',)
+                    settings_needed=("subject", "to"),
+                    settings_optional=("sender",),
                 )
 
     def send_notification(self, message, interval=None):
@@ -98,39 +105,51 @@ class SendNotification(object):
 
         message = message.strip()
         if not message:
-            raise SendNotificationException('Message can not be empty')
+            raise SendNotificationException("Message can not be empty")
 
         self.validate_conf()
 
         send_success = False
         for service in self.conf:
-            if service == 'notifikationnu':
+            if service == "notifikationnu":
                 try:
-                    self.send_notifikationnu(message=message, interval=interval, **self.conf['notifikationnu'])
+                    self.send_notifikationnu(
+                        message=message,
+                        interval=interval,
+                        **self.conf["notifikationnu"]
+                    )
                     send_success = True
                     break
-                except Exception, e:
-                    logging.error('Notifikation.nu failed. {}'.format(e))
+                except Exception as e:
+                    logging.error("Notifikation.nu failed. {}".format(e))
                     continue
-            elif service == 'pushover':
+            elif service == "pushover":
                 try:
-                    self.send_pushover(message=message, interval=interval, **self.conf['pushover'])
+                    self.send_pushover(
+                        message=message,
+                        interval=interval,
+                        **self.conf["pushover"]
+                    )
                     send_success = True
                     break
-                except Exception, e:
-                    logging.error('Pushover failed. {}'.format(e))
+                except Exception as e:
+                    logging.error("Pushover failed. {}".format(e))
                     continue
-            elif service == 'email':
+            elif service == "email":
                 try:
-                    self.send_email(message=message, interval=interval, **self.conf['email'])
+                    self.send_email(
+                        message=message,
+                        interval=interval,
+                        **self.conf["email"]
+                    )
                     send_success = True
                     break
-                except Exception, e:
-                    logging.error('Email failed. {}'.format(e))
+                except Exception as e:
+                    logging.error("Email failed. {}".format(e))
                     continue
 
         if not send_success:
-            error = 'No notification could be sent'
+            error = "No notification could be sent"
             logging.error(error)
             raise SendNotificationException(error)
 
@@ -138,92 +157,128 @@ class SendNotification(object):
         from hashlib import sha1
         import redis
 
-        interval_key = '{}:{}'.format(
+        interval_key = "{}:{}".format(
             os.path.splitext(os.path.basename(__file__))[0],
-            sha1(''.join([service, str(interval)] + [str(x) for x in notification.values()])).hexdigest())
+            sha1(
+                "".join(
+                    [service, str(interval)]
+                    + [str(x) for x in notification.values()]
+                )
+            ).hexdigest(),
+        )
 
         r = redis.StrictRedis()
         if r.get(interval_key):
-            logging.debug('Notification not sent. Interval set to {} sec, interval has not passed since last notification'.format(interval))
+            logging.debug(
+                "Notification not sent. Interval set to {} sec, interval has not passed since last notification".format(
+                    interval
+                )
+            )
             return False
         else:
-            logging.debug('Notification interval set to {} sec, no earlier notification sent'.format(interval))
+            logging.debug(
+                "Notification interval set to {} sec, no earlier notification sent".format(
+                    interval
+                )
+            )
             r.set(interval_key, 1)
             r.expire(interval_key, interval)
             return True
 
-    def send_notifikationnu(self, api_key, notification_id, message, interval=None, category=None, event=None):
+    def send_notifikationnu(
+        self,
+        api_key,
+        notification_id,
+        message,
+        interval=None,
+        category=None,
+        event=None,
+    ):
         # Notification
         notification = {
-            'api_key': api_key,
-            'notification_id': int(notification_id),
-            'message': message,
+            "api_key": api_key,
+            "notification_id": int(notification_id),
+            "message": message,
         }
         if category:
-            notification['category'] = category
+            notification["category"] = category
         if event:
-            notification['event'] = event
+            notification["event"] = event
 
-        logging.debug('Notifikation.nu sending notification {}'.format(notification))
+        logging.debug(
+            "Notifikation.nu sending notification {}".format(notification)
+        )
 
         # Check notification interval
-        if interval and not self.check_interval('notifikationnu', interval, notification):
+        if interval and not self.check_interval(
+            "notifikationnu", interval, notification
+        ):
             return False
 
-        del(notification['api_key'])
+        del notification["api_key"]
 
         # Send Notifikation.nu notification
         from notifikation_nu import NotifikationNu
+
         notifikation_nu = NotifikationNu(api_key)
         notifikation_nu.send_notification(**notification)
 
-        logging.debug('Notifikation.nu notification sent')
+        logging.debug("Notifikation.nu notification sent")
         return True
 
-    def send_pushover(self, app_token, api_key, message, interval=None, title=None):
+    def send_pushover(
+        self, app_token, api_key, message, interval=None, title=None
+    ):
         # Notification
         notification = {
-            'app_token': app_token,
-            'api_key': api_key,
-            'message': message,
+            "app_token": app_token,
+            "api_key": api_key,
+            "message": message,
         }
         if title:
-            notification['title'] = title
+            notification["title"] = title
 
-        logging.debug('Pushover sending notification {}'.format(notification))
+        logging.debug("Pushover sending notification {}".format(notification))
 
         # Check notification interval
-        if interval and not self.check_interval('pushover', interval, notification):
+        if interval and not self.check_interval(
+            "pushover", interval, notification
+        ):
             return False
 
         # Fix args
-        notification['token'] = notification['app_token']
-        notification['user'] = notification['api_key']
-        del(notification['app_token'], notification['api_key'])
+        notification["token"] = notification["app_token"]
+        notification["user"] = notification["api_key"]
+        del (notification["app_token"], notification["api_key"])
 
         # Send Pushover notification
         import requests
-        r = requests.post('https://api.pushover.net/1/messages.json', notification)
+
+        r = requests.post(
+            "https://api.pushover.net/1/messages.json", notification
+        )
         if r.status_code != 200:
             raise SendNotificationException(r.text)
 
-        logging.debug('Pushover notification sent')
+        logging.debug("Pushover notification sent")
         return True
 
     def send_email(self, subject, to, message, interval=None, sender=None):
         # Notification
         notification = {
-            'subject': subject,
-            'to': to,
-            'message': message,
+            "subject": subject,
+            "to": to,
+            "message": message,
         }
         if sender:
-            notification['sender'] = sender
+            notification["sender"] = sender
 
-        logging.debug('Email sending notification {}'.format(notification))
+        logging.debug("Email sending notification {}".format(notification))
 
         # Check notification interval
-        if interval and not self.check_interval('email', interval, notification):
+        if interval and not self.check_interval(
+            "email", interval, notification
+        ):
             return False
 
         # Send email notification
@@ -231,13 +286,13 @@ class SendNotification(object):
         from email.mime.text import MIMEText
 
         msg = MIMEText(message)
-        msg['Subject'] = subject
-        msg['From'] = sender
-        msg['To'] = to
+        msg["Subject"] = subject
+        msg["From"] = sender
+        msg["To"] = to
 
-        s = smtplib.SMTP('localhost')
+        s = smtplib.SMTP("localhost")
         s.sendmail(sender, [to], msg.as_string())
         s.quit()
 
-        logging.debug('Email notification sent')
+        logging.debug("Email notification sent")
         return True
