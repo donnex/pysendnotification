@@ -8,46 +8,55 @@ Supported services
 - Pushover
 - Email
 
-Supports interval setting for only sending notification every X seconds to
-prevent sending to many notifications against a specific service. This
-requires `redis`.
+Supports interval setting (X seconds) to prevent sending the same notification
+against a specific service multiple times within interval.
+This requires `redis`.
 
-## Send notification with config
+## Send notification example using config file
 
 ```python
-sn = SendNotification()
-sn.send_notification('Notification message')
-````
+from sendnotification import SendNotification
+
+send_notification = SendNotification()
+send_notification.send('Notification message')
+```
+
+## Send notification from command line using config file
+
+```shell
+sendnotification [-i/--interval 3600] 'Notification message'
+```
 
 ## Add interval, only send a notification every interval sec
 
 ```python
-sn.send_notification('Notification message', interval=3600)
+send_notification.send('Notification message', interval=3600)
 ```
 
 ## Manual setup without config
 
 ```python
-sn = SendNotification(auto_conf=False)
-sn.conf = {'pushover': {'app_token': '...', 'api_key': '...'}}
+send_notification = SendNotification(config_file=False)
+send_notification.config = {
+    'services': ['pushover'],
+    'pushover': {
+        'app_token': '...',
+        'api_key': '...'
+    }
+}
+send_notification.send('Notification message')
 ```
 
 ## Pushover notification
 
 ```python
-sn.send_pushover(app_token, api_key, message, interval=None, title=None)
+send_notification.send_pushover(app_token, api_key, message, interval=None, title=None)
 ```
 
 ## Email notification
 
 ```python
-sn.send_email(subject, to, message, interval=None, sender=None)
-```
-
-## Send from command line (uses config)
-
-```shell
-sendnotification [-i/--interval 3600] message
+send_notification.send_email(subject, to, message, interval=None, sender=None)
 ```
 
 ## Config

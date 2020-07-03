@@ -10,13 +10,15 @@ if __name__ == "__main__":
         "-i",
         "--interval",
         type=int,
-        help="Set the notification interval in seconds",
+        help="Set notification interval in seconds",
     )
     parser.add_argument(
         "-v", "--verbose", action="store_true", help="Verbose debug output"
     )
-    parser.add_argument("-c", "--conf", help="Conf file to use")
-    parser.add_argument("message", help="The notification message")
+    parser.add_argument(
+        "-c", "--config", dest="config_file", help="Config file path"
+    )
+    parser.add_argument("message", help="Notification message")
 
     args = parser.parse_args()
 
@@ -33,5 +35,5 @@ if __name__ == "__main__":
             datefmt="%Y-%m-%d %H:%M:%S",
         )
 
-    sn = SendNotification(conf=args.conf)
-    sn.send_notification(args.message, interval=args.interval)
+    send_notification = SendNotification(config_file=args.config_file)
+    send_notification.send(args.message, interval=args.interval)
