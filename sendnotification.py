@@ -225,11 +225,25 @@ class SendNotification:
         notification["user"] = notification["api_key"]
         del (notification["app_token"], notification["api_key"])
 
-        # Send Pushover notification
+        # Pushover notification
         import requests
+        from requests.adapters import HTTPAdapter
+        from requests.packages.urllib3.util.retry import Retry
 
-        response = requests.post(
-            "https://api.pushover.net/1/messages.json", notification
+        # Setup requests retries
+        retry_strategy = Retry(
+            total=3,
+            backoff_factor=1,
+            status_forcelist=[429, 500, 502, 503, 504],
+            method_whitelist=["POST"],
+        )
+        adapter = HTTPAdapter(max_retries=retry_strategy)
+        http = requests.Session()
+        http.mount("https://", adapter)
+
+        # Send notification
+        response = http.post(
+            "https://api.pushover.net/1/messages.json", notification, timeout=5
         )
         if response.status_code != 200:
             self.error(response.text)
